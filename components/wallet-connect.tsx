@@ -23,12 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+
 import { useToast } from '@/components/ui/use-toast';
 import { truncateAddress } from '@/lib/utils';
 
@@ -132,17 +127,14 @@ export default function WalletConnect() {
   return (
     <DropdownMenu open={showDropdown} onOpenChange={setShowDropdown}>
       <DropdownMenuTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
-          className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-          aria-haspopup="true"
-          aria-expanded={showDropdown ? 'true' : 'false'}
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
         >
           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
           <span>{ensName || truncateAddress(account)}</span>
           <ChevronDown className="h-4 w-4" />
-        </div>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64 p-0 overflow-hidden border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white dark:bg-slate-900">
         {/* Account Info */}
