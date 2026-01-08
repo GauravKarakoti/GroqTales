@@ -214,7 +214,7 @@ export function Header() {
           <Button
             variant="outline"
             size="sm"
-            className="hidden lg:flex bg-primary/20 hover:bg-primary/30 text-primary backdrop-blur-sm comic-pop comic-text-bold border-white/10"
+            className="hidden md:flex bg-primary/20 hover:bg-primary/30 text-primary backdrop-blur-sm comic-pop comic-text-bold border-white/10"
             onClick={handleCreateClick}
           >
             <PenSquare className="h-4 w-4 mr-2" />
@@ -231,13 +231,14 @@ export function Header() {
                   variant="ghost"
                   size="icon"
                   className="text-white hover:bg-white/10"
+                  aria-label="Open menu"
                 >
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="bg-[#36454F] border-l-4 border-black text-white p-0">
                 <SheetHeader className="p-6 border-b-4 border-black">
-                  <SheetTitle className="text-white comic-pop text-xl flex items-center gap-2">
+                  <SheetTitle className="text-white comic-pop text-xl flex items-center gap-2" style={{ textShadow: '2px 2px 0px rgba(0,0,0,1)' }}>
                     <div className="w-8 h-8 relative">
                       <Image src="/logo.png" alt="Logo" fill className="object-contain" />
                     </div>
