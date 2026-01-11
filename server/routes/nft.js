@@ -152,7 +152,11 @@ router.delete('/burn/:Id', async (req, res) => {
     }
 
     // Find the NFT by tokenId
-    const nft = await Nft.findById({ tokenId });
+    if (!mongoose.Types.ObjectId.isValid(tokenId)) {
+      return res.status(400).json({ error: 'Invalid ID' });
+    }
+    
+    const nft = await Nft.findById(tokenId);
 
     if (!nft) {
       return res.status(404).json({ error: 'NFT not found' });
