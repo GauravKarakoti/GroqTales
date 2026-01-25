@@ -10,14 +10,8 @@ const REFRESH_TIME_MS = ms(process.env.JWT_REFRESH_EXPIRES || '7d');
 // POST /api/v1/auth/signup - User signup
 router.post('/signup', async (req, res) => {
   try {
-    const {
-      email,
-      password,
-      firstName,
-      lastName,
-      role,
-      adminSecret,
-    } = req.body;
+    const { email, password, firstName, lastName, role, adminSecret } =
+      req.body;
 
     if (!email || !password || !firstName || !lastName || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -56,8 +50,8 @@ router.post('/signup', async (req, res) => {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
       path: '/api/v1/auth',
       maxAge: REFRESH_TIME_MS, // 7 days
     });
@@ -76,9 +70,12 @@ router.post('/signup', async (req, res) => {
       },
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
     return res
       .status(500)
-      .json({ message: 'Internal Server error', error: error.message });
+      .json({ message: 'Internal Server error'});
   }
 });
 
@@ -102,8 +99,8 @@ router.post('/login', async (req, res) => {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
       path: '/api/v1/auth',
       maxAge: REFRESH_TIME_MS, // 7 days
     });
@@ -124,7 +121,7 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     return res
       .status(500)
-      .json({ message: 'Internal Server error', error: error.message });
+      .json({ message: 'Internal Server error' });
   }
 });
 
