@@ -27,7 +27,7 @@ async function processOutbox() {
   } catch (err: any) {
     console.error(`Failed to process event ${event._id}`, err);
     
-    const attempts = event.attempts + 1;
+    const attempts = (event.attempts ?? 0) + 1;
     const status = attempts >= MAX_RETRIES ? 'failed' : 'pending';
      
     await Outbox.updateOne({ _id: event._id }, { 
