@@ -575,7 +575,16 @@ export default function NFTGalleryPage() {
                 placeholder="Search stories or authors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10
+                text-foreground
+                placeholder:text-muted-foreground
+                dark:text-white
+                dark:placeholder:text-gray-400
+                bg-background
+                dark:bg-muted/30
+                border
+                border-border
+                dark:border-muted"
               />
             </div>
           </div>
