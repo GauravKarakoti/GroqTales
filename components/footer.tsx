@@ -180,7 +180,7 @@ export function Footer() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
 
             {/* Built by Section */}
             <div className="text-center sm:text-left">
