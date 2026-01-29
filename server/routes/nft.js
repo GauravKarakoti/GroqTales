@@ -202,12 +202,20 @@ router.delete('/burn/:Id',authRequired, async (req, res) => {
 
 // NFT Marketplace Endpoints
 
-// router.patch('list/:Id', async (req, res) => {});
+router.patch('list/:Id', authRequired, async (req, res) => {
 
-// router.patch('remove/:Id', async (req, res) => {});
+});
 
-// router.patch('/buy/:Id', async (req, res) => {});
+router.patch('remove/:Id', authRequired, async (req, res) => {
 
-// router.patch('/update-price/:Id', async (req, res) => {});
+});
+
+router.patch('/buy/:Id', authRequired, async (req, res) => {
+
+});
+
+router.patch('/update-price/:Id', authRequired, async (req, res) => {
+  
+});
 
 module.exports = router;
