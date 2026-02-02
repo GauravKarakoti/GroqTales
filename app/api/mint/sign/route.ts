@@ -3,10 +3,15 @@ import { mintRequestSchema } from '@/lib/schemas';
 import { ethers } from 'ethers'; 
 import z from 'zod';
 
-const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY!; 
+const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY;
 
 export async function POST(req: NextRequest) {
   try {
+    if (!ADMIN_PRIVATE_KEY) {
+      console.error("ADMIN_PRIVATE_KEY is not configured");
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
     const body = await req.json();
     const { userWallet, storyId } = mintRequestSchema.parse(body);
 

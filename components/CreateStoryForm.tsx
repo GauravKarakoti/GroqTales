@@ -12,7 +12,7 @@ interface StoryResponse {
 export default function CreateStoryForm() {
   const [prompt, setPrompt] = useState('');
   const [genre, setGenre] = useState('fantasy');
-  const [tone, setTone] = useState('neutral');
+  const [tone, setTone] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedStory, setGeneratedStory] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function CreateStoryForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, genre, tone }),
+        body: JSON.stringify({ prompt, genre, ...(tone && { tone }) }),
       });
 
       if (res.status === 429) {
@@ -43,11 +43,12 @@ export default function CreateStoryForm() {
       if (!res.ok) {
         if (data.details) {
           console.error("Validation Errors:", data.details);
-          const fieldErrors = Object.keys(data.details._errors || {})
-            .map(field => `${field}: ${data.details?._errors[field]}`)
+          const fieldErrors = Object.entries(data.details)
+            .filter(([key, val]) => key !== '_errors' && val && (val as any)._errors?.length)
+            .map(([field, val]) => `${field}: ${(val as any)._errors.join(', ')}`)
             .join(', ');
             
-          setError(fieldErrors || "Please fix the errors in the form (check console).");
+          setError(fieldErrors || data.details._errors?.[0] || "Please fix the errors in the form.");
         } else {
           setError(data.error || "Something went wrong.");
         }
@@ -93,7 +94,7 @@ export default function CreateStoryForm() {
             onChange={(e) => setTone(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
           >
-            <option value="neutral">Neutral</option>
+            <option value="">Neutral (Default)</option>
             <option value="dark">Dark</option>
             <option value="humorous">Humorous</option>
             <option value="epic">Epic</option>
