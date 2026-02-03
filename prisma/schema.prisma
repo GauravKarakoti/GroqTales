@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model Story {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  prompt       String
+  genre        String
+  tone         String?
+  content      String?  
+  authorWallet String
+  isMinted     Boolean  @default(false)
+  signature    String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@map("stories") 
+}
