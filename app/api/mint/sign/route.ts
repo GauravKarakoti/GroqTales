@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const story = await prisma.story.findUnique({
       where: { id: storyId },
-      select: { id: true, isMinted: true, authorWallet: true }
+      select: { id: true, isMinted: true, authorWallet: true, signature: true }
     });
 
     if (!story) {
@@ -74,9 +74,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
-    if (story.isMinted) {
-      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "Already minted", storyId, userWallet, ip });
-      return NextResponse.json({ error: "Story already minted" }, { status: 403 });
+    if (story.isMinted || story.signature) {
+      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "Already minted or signature issued", storyId, userWallet, ip });
+      return NextResponse.json({ error: "Story already minted or signature pending" }, { status: 403 });
     }
 
     if (!story.authorWallet) {

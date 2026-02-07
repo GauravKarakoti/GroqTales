@@ -11,6 +11,6 @@ export const generateStorySchema = z.object({
 
 export const mintRequestSchema = z.object({
   userWallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address"),
-  storyId: z.string().uuid("Invalid Story ID"),
+  storyId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid Story ID"),
   signature: z.string().optional(), 
 });
