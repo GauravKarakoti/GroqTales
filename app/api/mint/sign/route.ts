@@ -45,13 +45,19 @@ export async function POST(req: NextRequest) {
 
     const { userWallet, storyId } = parseResult.data;
  
-    // If you wanna use email-based auth, ensure the database links the user to their wallet.
-    const sessionWallet = (session.user as any).address; 
-    
-    if (sessionWallet && sessionWallet.toLowerCase() !== userWallet.toLowerCase()) {
+    const user = await prisma.user.findUnique({
+      where: { id: (session.user as any).id },
+      select: { walletAddress: true }
+    });
+
+    if (!user?.walletAddress) {
+      return NextResponse.json({ error: "No wallet linked to your account" }, { status: 403 });
+    }
+
+    if (user.walletAddress.toLowerCase() !== userWallet.toLowerCase()) {
       logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { 
         reason: "Identity Mismatch", 
-        sessionWallet, 
+        sessionWallet: user.walletAddress,
         requestedWallet: userWallet,
         ip 
       });
@@ -64,14 +70,22 @@ export async function POST(req: NextRequest) {
     });
 
     if (!story) {
+      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "Story not found", storyId, userWallet, ip });
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
     if (story.isMinted) {
+      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "Already minted", storyId, userWallet, ip });
       return NextResponse.json({ error: "Story already minted" }, { status: 403 });
     }
 
-    if (story.authorWallet && story.authorWallet.toLowerCase() !== userWallet.toLowerCase()) {
+    if (!story.authorWallet) {
+      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "No author wallet on story", storyId, userWallet, ip });
+      return NextResponse.json({ error: "Story has no linked author wallet" }, { status: 403 });
+    }
+
+    if (story.authorWallet.toLowerCase() !== userWallet.toLowerCase()) {
+      logAudit('MINT_SIGNATURE_REQUEST', 'FAILURE', { reason: "Not the author", storyId, userWallet, ip });
       return NextResponse.json({ error: "Forbidden: You are not the author of this story" }, { status: 403 });
     }
 

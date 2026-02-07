@@ -52,7 +52,8 @@
     "start:sdk": "node server/sdk-server.js",
     "start:worker": "node server/worker.js",
     "backend:dev": "nodemon server/backend.js",
-    "backend:test": "node server/backend.js"
+    "backend:test": "node server/backend.js",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
