@@ -157,13 +157,14 @@ router.post('/create',authRequired, async (req, res) => {
 
     return res.status(201).json(story);
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ error: error.message });
   }
 });
 
 /**
  * @swagger
- * /api/v1/stories/search/:id:
+ * /api/v1/stories/search/{id}:
  *   get:
  *     tags:
  *       - Stories
@@ -174,10 +175,9 @@ router.post('/create',authRequired, async (req, res) => {
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: integer
- *           default: 1
  *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Stories retrieved successfully.
