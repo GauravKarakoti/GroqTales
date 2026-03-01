@@ -440,32 +440,28 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Start server after database connection succeeds
+// Start server immediately so health checks pass
+server = app.listen(PORT, () => {
+  logger.info(`GroqTales Backend API server running on port ${PORT}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Health check: ${process.env.PROD_URL || 'http://localhost:' + PORT}/api/health`);
+});
+
 const DB_MAX_RETRIES = parseInt(process.env.DB_MAX_RETRIES || '5', 10);
 const DB_RETRY_DELAY_MS = parseInt(process.env.DB_RETRY_DELAY_MS || '2000', 10);
 
+// Connect to database asynchronously
 connectDB(DB_MAX_RETRIES, DB_RETRY_DELAY_MS)
   .then(() => {
-    server = app.listen(PORT, () => {
-      logger.info(`GroqTales Backend API server running on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`Health check: ${process.env.PROD_URL || 'http://localhost:' + PORT}/api/health`);
-    });
+    logger.info('Database connection established successfully after server start.');
   })
   .catch((err) => {
-    console.error('Database connection failed:', err.message);
-
-    // In development, start server anyway without database
+    logger.error('Database connection failed:', err.message);
     if (process.env.NODE_ENV === 'development') {
-      logger.warn('Starting server in development mode without database...');
-      server = app.listen(PORT, () => {
-        console.log(
-          `GroqTales Backend API server running on port ${PORT} (NO DATABASE)`
-        );
-        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`Health check: ${process.env.PROD_URL || 'http://localhost:' + PORT}/api/health`);
-      });
+      logger.warn('Running in development mode without database...');
     } else {
-      process.exit(1);
+      logger.error('CRITICAL: Database connection failed in production! Application will run in degraded mode.');
+      // Do not process.exit(1) here unless you want to force Render to kill and restart
+      // Instead, we let the health check return 200 with 'degraded' status, or we can choose to exit based on specific requirements.
     }
   });

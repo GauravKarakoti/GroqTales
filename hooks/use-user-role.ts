@@ -53,6 +53,11 @@ export function useUserRole(): UseUserRoleReturn {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, s) => {
             setSession(s as RBACSession | null);
+            if (s?.access_token) {
+                localStorage.setItem('accessToken', s.access_token);
+            } else {
+                localStorage.removeItem('accessToken');
+            }
         });
 
         return () => subscription.unsubscribe();
