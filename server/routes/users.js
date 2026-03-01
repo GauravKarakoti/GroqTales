@@ -98,6 +98,41 @@ router.get('/profile/id/:id', async (req, res) => {
   }
 });
 
+// GET /api/v1/users/profile/username/:username - Get user profile by username
+router.get('/profile/username/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await User.findOne({ username })
+      .select('username bio avatar badges firstName lastName wallet walletAddress email socialLinks createdAt')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const stories = await Story.find({ author: user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: {
+        user,
+        stories,
+        stats: {
+          storyCount: stories.length,
+          totalLikes: stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0),
+          totalViews: stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Profile by Username Route Error:', error);
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
 // GET /api/v1/users/profile/:walletAddress - Get user profile by wallet address
 router.get('/profile/:walletAddress', async (req, res) => {
   try {

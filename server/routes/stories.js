@@ -73,13 +73,20 @@ const { authRequired } = require('../middleware/auth');
 // GET /api/v1/stories - Get all stories
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, genre, author } = req.query;
+    const { page = 1, limit = 10, genre, author, status } = req.query;
     const query = {};
 
     if (genre) query.genre = genre;
     if (author) query.author = author;
+    // If status is explicitly provided, filter by it; otherwise default to 'approved'
+    if (status) {
+      query.moderationStatus = status;
+    } else {
+      query.moderationStatus = 'approved';
+    }
 
     const stories = await Story.find(query)
+      .populate('author', 'username avatar firstName lastName')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -141,13 +148,15 @@ router.get('/', async (req, res) => {
 // POST /api/v1/stories/create - Create new story
 router.post('/create', authRequired, async (req, res) => {
   try {
-    const { title, content, genre } = req.body;
+    const { title, content, genre, tags } = req.body;
 
     const story = new Story({
       title,
       content,
       genre,
       author: req.user.id,
+      tags: tags || [],
+      moderationStatus: 'pending',
     });
 
     await story.save();
@@ -242,6 +251,40 @@ router.post('/:id/analyze', authRequired, async (req, res) => {
     };
 
     return res.json(analysis);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/v1/stories/:id/moderate - Moderate a story (admin only)
+router.patch('/:id/moderate', authRequired, async (req, res) => {
+  try {
+    // Check if user is admin
+    const user = await require('../models/User').findById(req.user.id).lean();
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { status, notes } = req.body;
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be approved or rejected' });
+    }
+
+    const story = await Story.findByIdAndUpdate(
+      req.params.id,
+      {
+        moderationStatus: status,
+        moderatorId: req.user.id,
+        moderationNotes: notes || '',
+      },
+      { new: true }
+    ).lean();
+
+    if (!story) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    return res.json({ success: true, data: story });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

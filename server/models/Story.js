@@ -31,6 +31,19 @@ const StorySchema = new mongoose.Schema({
   // NEW: Web3/NFT tracking
   isMinted: { type: Boolean, default: false },
   nftTokenId: { type: String, default: null },
+  // NEW: Moderation system
+  moderationStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true,
+  },
+  moderatorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  moderationNotes: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true }); // Automatically adds updatedAt
 
