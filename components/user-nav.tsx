@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Wallet, User, Settings, LogOut, BookOpen, Bell, Shield, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
+import { fetchNotifications } from '@/lib/feeds-client';
 
 // Simple deterministic hash to avoid sending raw PII or identifiers to third parties
 const generateSeed = (input?: string) => {
@@ -68,20 +69,49 @@ export function UserNav() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (account) {
+      if (account || session) {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/users/profile/${account}`);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/users/profile/${account || session?.user?.id}`);
           if (res.ok) {
             const data = await res.json();
-            setDbUser(data.user);
+            setDbUser(data.data?.user || data.user || data);
           }
         } catch (err) {
           console.error("Failed to fetch nav user data", err);
         }
       }
     };
-    if (account) fetchUserData();
-  }, [account]);
+    if (account || session) fetchUserData();
+
+    // Listen for global profile updates (e.g. from settings page)
+    const handleProfileUpdate = () => fetchUserData();
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [account, session]);
+
+  // Notification badge count — poll every 20s
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const notifs = await fetchNotifications(true, 50);
+      setUnreadCount(notifs.filter(n => !n.read).length);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (account || session) {
+      loadUnreadCount();
+      notifIntervalRef.current = setInterval(loadUnreadCount, 20_000);
+    }
+    return () => {
+      if (notifIntervalRef.current) clearInterval(notifIntervalRef.current);
+    };
+  }, [account, session, loadUnreadCount]);
 
   const handleLogout = async () => {
     if (account) await disconnectWallet();
@@ -196,6 +226,11 @@ export function UserNav() {
               <Link href="/notifications" className="flex items-center w-full">
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-violet-500 text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             </DropdownMenuItem>
 

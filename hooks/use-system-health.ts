@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface HealthStatus {
     api: boolean;
@@ -10,8 +10,10 @@ interface HealthStatus {
     allHealthy: boolean;
 }
 
+const HEALTH_POLL_INTERVAL_MS = 30_000; // 30 seconds
+
 /**
- * Polls the backend health endpoints on mount and returns system status.
+ * Polls the backend health endpoints on mount and at regular intervals.
  * Used to show/hide the "SYSTEM OFFLINE" banner.
  */
 export function useSystemHealth(): HealthStatus {
@@ -23,6 +25,8 @@ export function useSystemHealth(): HealthStatus {
         allHealthy: false,
     });
 
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     useEffect(() => {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
         if (!baseUrl) {
@@ -30,7 +34,7 @@ export function useSystemHealth(): HealthStatus {
             return;
         }
 
-        const controller = new AbortController();
+        let aborted = false;
 
         async function check() {
             let api = false;
@@ -39,41 +43,31 @@ export function useSystemHealth(): HealthStatus {
 
             try {
                 const res = await fetch(`${baseUrl}/api/health`, {
-                    signal: controller.signal,
+                    signal: AbortSignal.timeout(8000),
                 });
                 if (res.ok) {
                     const data = await res.json();
                     api = data.status === 'healthy' || data.status === 'degraded';
+                    // The backend returns database info nested under data.database
+                    db = data.database?.connected === true;
                 }
             } catch {
                 // API unreachable
             }
 
             try {
-                const res = await fetch(`${baseUrl}/api/health/db`, {
-                    signal: controller.signal,
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    db = data.connected === true;
-                }
-            } catch {
-                // DB check failed
-            }
-
-            try {
                 const res = await fetch(`${baseUrl}/api/health/bot`, {
-                    signal: controller.signal,
+                    signal: AbortSignal.timeout(8000),
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    bot = data.available === true || data.status === 'online';
+                    bot = data.status === 'healthy';
                 }
             } catch {
                 // Bot check failed
             }
 
-            if (!controller.signal.aborted) {
+            if (!aborted) {
                 setStatus({
                     api,
                     db,
@@ -84,8 +78,16 @@ export function useSystemHealth(): HealthStatus {
             }
         }
 
+        // Initial check
         check();
-        return () => controller.abort();
+
+        // Poll at interval
+        intervalRef.current = setInterval(check, HEALTH_POLL_INTERVAL_MS);
+
+        return () => {
+            aborted = true;
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
     }, []);
 
     return status;

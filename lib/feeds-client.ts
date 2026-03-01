@@ -1,13 +1,17 @@
 /**
  * Feeds client — fetches trending stories and notifications from
- * the CF Worker D1 API. Falls back to the main Express backend.
+ * the backend API (which proxies to CF Worker D1). Falls back gracefully.
  */
 
-const CF_WORKER_URL = process.env.NEXT_PUBLIC_CF_WORKER_URL || '';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 function feedsBase(): string {
-    return CF_WORKER_URL || API_URL;
+    return API_URL;
+}
+
+function getAuthToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken');
 }
 
 export interface TrendingStory {
@@ -51,15 +55,19 @@ export async function fetchTrending(
     }
 }
 
+/**
+ * Fetch notifications for the current authenticated user.
+ * Uses the /api/feeds/notifications/me endpoint which handles
+ * user identification via the JWT token.
+ */
 export async function fetchNotifications(
-    userId: string,
-    token: string,
     unreadOnly = false,
     limit = 30,
 ): Promise<Notification[]> {
     try {
+        const token = getAuthToken();
         const res = await fetch(
-            `${feedsBase()}/api/feeds/notifications/${userId}?unread=${unreadOnly}&limit=${limit}`,
+            `${feedsBase()}/api/feeds/notifications/me?unread=${unreadOnly ? 50 : 0}&limit=${limit}`,
             {
                 headers: {
                     ...(token && { Authorization: `Bearer ${token}` }),
@@ -74,9 +82,10 @@ export async function fetchNotifications(
     }
 }
 
-export async function markNotificationRead(id: string, token: string): Promise<boolean> {
-    if (!token) throw new Error('Authentication token required');
+export async function markNotificationRead(id: string): Promise<boolean> {
     try {
+        const token = getAuthToken();
+        if (!token) return false;
         const res = await fetch(`${feedsBase()}/api/feeds/notifications/${id}/read`, {
             method: 'POST',
             headers: {
@@ -89,16 +98,17 @@ export async function markNotificationRead(id: string, token: string): Promise<b
     }
 }
 
-export async function markAllNotificationsRead(token: string): Promise<boolean> {
-    if (!token) throw new Error('Authentication token required');
+export async function markAllNotificationsRead(): Promise<boolean> {
     try {
+        const token = getAuthToken();
+        if (!token) return false;
         const res = await fetch(`${feedsBase()}/api/feeds/notifications/mark-all-read`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({}), // Empty body, the user is identified via the backend's token validation
+            body: JSON.stringify({}),
         });
         return res.ok;
     } catch {

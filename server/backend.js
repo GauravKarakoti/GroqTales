@@ -146,9 +146,21 @@ app.use(
 );
 
 // CORS configuration
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://groqtales.xyz')
+  .split(',')
+  .map(o => o.trim())
+  .concat(['https://www.groqtales.xyz', 'https://groqtales.xyz']);
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'https://groqtales.xyz',
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -335,6 +347,8 @@ app.get('/api/health/bot', (req, res) => {
     status: botOnline ? 'healthy' : 'down',
     timestamp: new Date().toISOString(),
     service: 'helpbot',
+    version: process.env.API_VERSION || 'v1',
+    uptime: formatUptime(process.uptime()),
   });
 });
 
@@ -360,13 +374,10 @@ app.use('/api/v1/comics', require('./routes/comics'));
 app.use('/api/v1/nft', require('./routes/nft'));
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/helpbot', require('./routes/helpbot'));
+app.use('/api/v1/helpbot', require('./routes/helpbot'));
 
 app.use('/api/feed', require('./routes/feed'));
-
-// Helpbot routes (using either /api/v1/helpbot or /api/helpbot)
-// Maintaining both per existing logic but removing the duplicate
-app.use('/api/helpbot', require('./routes/helpbot'));
-app.use('/api/v1/helpbot', require('./routes/helpbot'));
+app.use('/api/feeds', require('./routes/notification-feed'));
 
 
 app.use('/api/v1/ai', require('./routes/ai'));

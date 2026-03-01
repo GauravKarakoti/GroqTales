@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
     Bell,
@@ -11,7 +11,7 @@ import {
     UserPlus,
     AlertCircle,
     ArrowLeft,
-    Trash2,
+    RefreshCw,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ import {
     markAllNotificationsRead,
     type Notification,
 } from '@/lib/feeds-client';
+
+const POLL_INTERVAL_MS = 15_000; // 15 seconds
 
 const NOTIF_ICONS: Record<string, typeof Bell> = {
     story_approved: BookOpen,
@@ -46,17 +48,34 @@ function timeAgo(dateStr: string): string {
 export default function NotificationsPage() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useEffect(() => {
-        // Get userId from localStorage token or session
-        const userId = typeof window !== 'undefined'
-            ? localStorage.getItem('userId') || 'me'
-            : 'me';
-
-        fetchNotifications(userId, false, 50)
-            .then(setNotifications)
-            .finally(() => setLoading(false));
+    const loadNotifications = useCallback(async (showRefresh = false) => {
+        if (showRefresh) setRefreshing(true);
+        try {
+            const data = await fetchNotifications(false, 50);
+            setNotifications(data);
+        } catch {
+            // Silently fail — keep existing data
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     }, []);
+
+    // Initial load + polling
+    useEffect(() => {
+        loadNotifications();
+
+        intervalRef.current = setInterval(() => {
+            loadNotifications();
+        }, POLL_INTERVAL_MS);
+
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
+    }, [loadNotifications]);
 
     const handleMarkRead = async (id: string) => {
         const ok = await markNotificationRead(id);
@@ -68,8 +87,7 @@ export default function NotificationsPage() {
     };
 
     const handleMarkAllRead = async () => {
-        const userId = localStorage.getItem('userId') || 'me';
-        const ok = await markAllNotificationsRead(userId);
+        const ok = await markAllNotificationsRead();
         if (ok) {
             setNotifications((prev) => prev.map((n) => ({ ...n, read: 1 })));
         }
@@ -101,16 +119,27 @@ export default function NotificationsPage() {
                             </p>
                         </div>
                     </div>
-                    {unreadCount > 0 && (
+                    <div className="flex gap-2">
                         <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 border-slate-700 text-slate-300"
-                            onClick={handleMarkAllRead}
+                            variant="ghost"
+                            size="icon"
+                            className="text-slate-400 hover:text-white"
+                            onClick={() => loadNotifications(true)}
+                            disabled={refreshing}
                         >
-                            <CheckCheck className="w-4 h-4" /> Mark All Read
+                            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                         </Button>
-                    )}
+                        {unreadCount > 0 && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 border-slate-700 text-slate-300"
+                                onClick={handleMarkAllRead}
+                            >
+                                <CheckCheck className="w-4 h-4" /> Mark All Read
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {loading ? (
@@ -141,8 +170,8 @@ export default function NotificationsPage() {
                                 <Card
                                     key={notif.id}
                                     className={`border-slate-800 transition-colors cursor-pointer ${isRead
-                                            ? 'bg-slate-950/30 hover:bg-slate-950/50'
-                                            : 'bg-slate-950/80 border-l-2 border-l-violet-500 hover:bg-slate-900/80'
+                                        ? 'bg-slate-950/30 hover:bg-slate-950/50'
+                                        : 'bg-slate-950/80 border-l-2 border-l-violet-500 hover:bg-slate-900/80'
                                         }`}
                                     onClick={() => !isRead && handleMarkRead(notif.id)}
                                 >
@@ -159,8 +188,8 @@ export default function NotificationsPage() {
                                         <div className="flex-1 min-w-0">
                                             <p
                                                 className={`text-sm ${isRead
-                                                        ? 'text-slate-400 font-normal'
-                                                        : 'text-slate-200 font-medium'
+                                                    ? 'text-slate-400 font-normal'
+                                                    : 'text-slate-200 font-medium'
                                                     }`}
                                             >
                                                 {notif.title}

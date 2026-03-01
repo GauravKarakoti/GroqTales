@@ -7,6 +7,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Story = require('../models/Story');
+const axios = require('axios');
+const logger = require('../utils/logger');
 const router = express.Router();
 const { authRequired } = require('../middleware/auth');
 
@@ -389,22 +391,50 @@ router.patch('/update', authRequired, async (req, res) => {
       'phone',
       'walletAddress',
       'email',
+      'username',
+      'bio',
+      'avatar'
     ];
     Object.keys(updates).forEach((key) => {
       if (!allowed.includes(key)) {
         delete updates[key];
       }
     });
+
     const updatedProfile = await User.findByIdAndUpdate(
       req.user.id,
       { $set: { ...updates } },
       { new: true, upsert: false, runValidators: true }
     ).lean();
-    if (!updatedProfile)
+    if (!updatedProfile) {
       return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Attempt to sync to Cloudflare D1
+    const workerUrl = process.env.CF_WORKER_URL || 'https://groqtales-backend-workers.mantejsingh.workers.dev';
+    const CF_SYNC_ENDPOINT = `${workerUrl}/api/profiles/${req.user.id}`;
+    const token = req.headers.authorization?.split(' ')[1];
+
+    try {
+      await axios.put(CF_SYNC_ENDPOINT, {
+        username: updatedProfile.username,
+        bio: updatedProfile.bio,
+        avatar_url: updatedProfile.avatar || null
+      }, {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
+    } catch (cfError) {
+      logger.error('Failed to sync profile to Cloudflare worker:', cfError.message);
+      // Non-blocking error
+    }
 
     return res.json(updatedProfile);
   } catch (error) {
+    logger.error('Profile update failed:', error.message);
     return res.status(500).json({ error: error.message });
   }
 });
