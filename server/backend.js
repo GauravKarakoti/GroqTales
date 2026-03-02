@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const csrf = require('lusca').csrf;
 // MongoDB is no longer required — Supabase is the primary database
 // const mongoose = require('mongoose');
 const swaggerJSDoc = require('swagger-jsdoc');
@@ -481,6 +482,14 @@ app.use(compression());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+
+// To prevent lusca crash due to missing session, provide a dummy session if none exists
+app.use((req, res, next) => {
+  req.session = req.session || {};
+  next();
+});
+
+app.use(csrf());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware (after request parsing)

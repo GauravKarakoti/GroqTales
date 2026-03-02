@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function UploadPage() {
     const [activeTab, setActiveTab] = useState<'document' | 'write'>('document');
@@ -27,6 +28,25 @@ export default function UploadPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const router = useRouter();
+    const supabase = React.useMemo(() => createClient(), []);
+
+    React.useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const isAdmin = localStorage.getItem('adminSession') === 'true';
+
+            if (!session && !isAdmin) {
+                toast({
+                    title: 'Access Denied',
+                    description: 'Please log in to upload stories.',
+                    variant: 'destructive',
+                });
+                router.push('/sign-in');
+            }
+        };
+
+        checkAuth();
+    }, [supabase.auth, router, toast]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();

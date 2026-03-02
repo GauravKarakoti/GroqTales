@@ -15,10 +15,10 @@ import {
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, Suspense } from 'react';
-
 import AIStoryGenerator from '@/components/ai-story-generator';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { createClient } from '@/lib/supabase/client';
 
 export default function AIStoryGeneratorPage() {
   return (
@@ -41,6 +41,25 @@ function AIStoryContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [navigatedFrom, setNavigatedFrom] = useState<string | null>(null);
+  const supabase = React.useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const isAdmin = localStorage.getItem('adminSession') === 'true';
+
+      if (!session && !isAdmin) {
+        toast({
+          title: 'Access Denied',
+          description: 'Please log in to use the AI generator.',
+          variant: 'destructive',
+        });
+        router.push('/sign-in');
+      }
+    };
+
+    checkAuth();
+  }, [supabase.auth, router, toast]);
 
   const source = searchParams.get('source');
   const genre = searchParams.get('genre') || 'fantasy';
