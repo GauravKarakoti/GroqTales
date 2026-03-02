@@ -46,9 +46,12 @@ function AIStoryContent() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      const isAdmin = localStorage.getItem('adminSession') === 'true';
+      
+      // Enforce authorization via secure server-validated source
+      // Replace localStorage adminSession with authenticated API response reliance
+      const isServerAdmin = session?.user?.user_metadata?.role === 'admin';
 
-      if (!session && !isAdmin) {
+      if (!session && !isServerAdmin) {
         toast({
           title: 'Access Denied',
           description: 'Please log in to use the AI generator.',

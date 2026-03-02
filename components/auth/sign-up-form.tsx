@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -38,6 +38,16 @@ export function SignUpForm({ onToggleMode }: { onToggleMode: () => void }) {
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
+
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Password Strength Logic
   const getPasswordStrength = () => {
@@ -115,7 +125,7 @@ export function SignUpForm({ onToggleMode }: { onToggleMode: () => void }) {
         description: 'Please check your email to verify your account.',
       });
       
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         onToggleMode(); // Automatically toggle to login after registration success.
       }, 1500);
       
@@ -299,7 +309,7 @@ export function SignUpForm({ onToggleMode }: { onToggleMode: () => void }) {
                       className="w-full h-11 pl-9 pr-10 bg-transparent border-none text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-0 shadow-none text-sm"
                       placeholder="••••••••"
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} tabIndex={-1} className="absolute right-3 text-neutral-500 hover:text-neutral-300">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 text-neutral-500 hover:text-neutral-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 rounded-sm transition-colors">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -326,7 +336,7 @@ export function SignUpForm({ onToggleMode }: { onToggleMode: () => void }) {
                       className="w-full h-11 pl-9 pr-10 bg-transparent border-none text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-0 shadow-none text-sm"
                       placeholder="••••••••"
                     />
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} tabIndex={-1} className="absolute right-3 text-neutral-500 hover:text-neutral-300">
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} aria-pressed={showConfirmPassword} aria-label={showConfirmPassword ? "Hide password" : "Show password"} className="absolute right-3 text-neutral-500 hover:text-neutral-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 rounded-sm transition-colors">
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>

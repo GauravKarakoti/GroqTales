@@ -8,9 +8,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, LogIn, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, LogIn, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import WalletConnect from '@/components/wallet-connect';
+import { loginWithUsernameOrEmail } from '@/app/actions/auth';
 
 export function SignInForm({ onToggleMode }: { onToggleMode: () => void }) {
   const [identifier, setIdentifier] = useState('');
@@ -49,28 +50,11 @@ export function SignInForm({ onToggleMode }: { onToggleMode: () => void }) {
     setErrorMsg('');
     
     try {
-      let loginEmail = identifier;
-      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+      const result = await loginWithUsernameOrEmail(identifier, password);
 
-      if (!isEmail) {
-        const { data, error: lookupError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('username', identifier)
-          .single();
-          
-        if (lookupError || !data || !data.email) {
-          throw new Error('Username not found or has no email associated');
-        }
-        loginEmail = data.email;
+      if (result.error) {
+        throw new Error(result.error);
       }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password,
-      });
-
-      if (error) throw error;
       
       setSuccess(true);
       toast({
@@ -123,7 +107,7 @@ export function SignInForm({ onToggleMode }: { onToggleMode: () => void }) {
               Email / Username
             </Label>
             <div className={`relative flex items-center rounded-xl border transition-colors ${focusedField === 'identifier' ? 'border-neutral-500 bg-[#1c1c1f]' : 'border-neutral-800 bg-[#141417]'}`}>
-              <Mail className={`absolute left-4 w-4 h-4 transition-colors ${focusedField === 'identifier' ? 'text-neutral-300' : 'text-neutral-600'}`} />
+              <svg className={`absolute left-4 w-4 h-4 transition-colors ${focusedField === 'identifier' ? 'text-neutral-300' : 'text-neutral-600'}`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               <Input 
                 id="identifier" 
                 type="text" 
@@ -162,8 +146,9 @@ export function SignInForm({ onToggleMode }: { onToggleMode: () => void }) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                className="absolute right-4 text-neutral-500 hover:text-neutral-300 focus:outline-none transition-colors"
+                aria-pressed={showPassword}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-4 text-neutral-500 hover:text-neutral-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 rounded-sm transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>

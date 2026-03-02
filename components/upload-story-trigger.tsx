@@ -39,7 +39,8 @@ export function UploadStoryTrigger({
 
     const handleUploadClick = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (!account && !session) {
+        // Strict check: An authenticated Supabase session is required to upload
+        if (!session) {
             router.push('/sign-in');
         } else {
             router.push('/upload');

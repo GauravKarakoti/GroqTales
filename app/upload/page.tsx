@@ -33,9 +33,9 @@ export default function UploadPage() {
     React.useEffect(() => {
         const checkAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            const isAdmin = localStorage.getItem('adminSession') === 'true';
+            const isServerAdmin = session?.user?.user_metadata?.role === 'admin';
 
-            if (!session && !isAdmin) {
+            if (!session && !isServerAdmin) {
                 toast({
                     title: 'Access Denied',
                     description: 'Please log in to upload stories.',
@@ -117,8 +117,13 @@ export default function UploadPage() {
         setIsSubmitting(true);
 
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) throw new Error("Authentication required");
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token || localStorage.getItem('accessToken');
+            const isServerAdmin = session?.user?.user_metadata?.role === 'admin';
+
+            if (!token && !isServerAdmin) {
+                throw new Error("Authentication required");
+            }
 
             const formData = new FormData();
             formData.append('title', title);
@@ -126,7 +131,7 @@ export default function UploadPage() {
 
             let endpoint = 'https://groqtales-backend-api.onrender.com/api/v1/stories';
             let requestOptions: RequestInit = {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             };
 
             if (activeTab === 'document' && file) {
