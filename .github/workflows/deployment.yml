@@ -2,7 +2,7 @@ name: Deploy to Cloudflare Pages (Production)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "Drago"]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,6 @@ permissions:
 
 jobs:
   deploy:
-    if: github.repository == 'IndieHub25/GroqTales'
     name: Build & Deploy to Cloudflare Pages
     runs-on: ubuntu-latest
     environment:
@@ -55,4 +54,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy out --project-name=groqtales --branch=main
+          command: pages deploy out --project-name=groqtales --branch=${{ github.ref_name }}
