@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.3.100 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.3.101 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+
+## [1.3.101] - 2026-03-03
+
+### Added
+- **Dynamic Blog Architecture**: Rebuilt the `/blog` system. Created a visually appealing Blog Index listing page at `/blog`, converting the previous statically-routed article into a dynamic nested route at `/blog/[slug]`. 
+- **Real-Time Marketplace Sync**: Overhauled the Marketplace feature. Renamed the legacy `/nft-marketplace` route to `/marketplace`, deleted all old static mock-data files, and constructed an intelligent UI that reads and syncs directly from the Supabase `stories` table in real time.
+
+### Fixed
+- **Image Overlays**: Configured the frontend to prioritize rendering external logo media located at `/blogs/blog-data/Blog 1/blog-logo.png` for both the index cover image and internal hero banner.
 
 ## [1.3.100] - 2026-03-02
 
