@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const cors = require('cors');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -22,6 +23,77 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3003;
+
+// CORS configuration — allow multiple origins
+const allowedOrigins = [
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://groqtales-backend-api.onrender.com',
+  'https://groqtales.vercel.app',
+  'https://groqtales-git-main-indie-hub25s-projects.vercel.app',
+  'https://www.groqtales.xyz',
+  'https://groqtales.xyz',
+  'https://groqtales.pages.dev',
+  'https://groqtales.netlify.app',
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (Swagger UI, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin matches any allowed origin
+      const isAllowed = allowedOrigins.some(allowed => {
+        try {
+          const originUrl = new URL(origin);
+          const originHostname = originUrl.hostname;
+          
+          try {
+            const allowedUrl = new URL(allowed);
+            const allowedHost = allowedUrl.hostname;
+            
+            // Exact hostname match
+            if (originHostname === allowedHost) return true;
+            // Subdomain match (e.g., preview.groqtales.xyz matches *.groqtales.xyz)
+            if (originHostname.endsWith('.' + allowedHost)) return true;
+          } catch {
+            // allowed is not a valid URL, skip
+          }
+          
+          // Vercel preview: allow *.vercel.app
+          if (originHostname === 'vercel.app' || originHostname.endsWith('.vercel.app')) return true;
+          // Cloudflare Pages preview: allow *.pages.dev
+          if (originHostname === 'pages.dev' || originHostname.endsWith('.pages.dev')) return true;
+          
+          return false;
+        } catch {
+          // Invalid origin URL, reject
+          return false;
+        }
+      });
+      
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-API-Key',
+      'X-Request-ID',
+    ],
+  })
+);
+
+app.use(express.json());
 
 // ---------------------------------------------------------------------------
 // In-memory metrics store

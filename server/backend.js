@@ -13,6 +13,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const csrf = require('lusca').csrf;
+const { corsOriginCallback } = require('./config/cors');
 // MongoDB is no longer required — Supabase is the primary database
 // const mongoose = require('mongoose');
 const swaggerJSDoc = require('swagger-jsdoc');
@@ -270,28 +271,10 @@ app.use(
   })
 );
 
-// CORS configuration — allow multiple origins
-const allowedOrigins = [
-  process.env.CORS_ORIGIN,
-  process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://groqtales-backend-api.onrender.com',
-  'https://groqtales.vercel.app',
-  'https://www.groqtales.xyz',
-  'https://groqtales.xyz',
-].filter(Boolean);
-
+// CORS configuration — imported from shared config
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (Swagger UI, curl, server-to-server)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: corsOriginCallback,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -300,6 +283,7 @@ app.use(
       'X-API-Key',
       'X-Request-ID',
     ],
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   })
 );
 
@@ -371,7 +355,7 @@ app.get(['/api/health', '/api/health/db'], async (req, res) => {
     },
     rateLimit: {
       windowMs: 15 * 60 * 1000,
-      maxRequestsPerWindow: 100,
+      maxRequestsPerWindow: RATE_LIMIT_MAX,
     },
   });
 });
@@ -471,10 +455,11 @@ app.get('/', (req, res) => {
 });
 
 
-// Rate limiting
+// Rate limiting - increased limits for production use
+const RATE_LIMIT_MAX = 1000; // Increased from 100 to 1000 requests per window
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: RATE_LIMIT_MAX,
   skip: (req) => {
     const path = req.originalUrl;
     // Never rate limit liveness/readiness probes or the root welcome page
@@ -483,6 +468,8 @@ const limiter = rateLimit({
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 app.use('/api/', limiter);
 
