@@ -186,19 +186,13 @@ describe('Preservation Property Tests: Existing Functionality', () => {
         fc.asyncProperty(
           fc.constantFrom(...disallowedOrigins),
           async (origin) => {
-            // Note: supertest doesn't fully simulate browser CORS behavior
-            // In a real browser, the request would be blocked
-            // Here we verify the origin is not in the allowed list
-            const allowedOrigins = [
-              'http://localhost:3000',
-              'http://localhost:3001',
-              'https://groqtales.vercel.app',
-              'https://groqtales.xyz',
-              'https://www.groqtales.xyz',
-            ];
+            // Verify via actual HTTP request that disallowed origins are blocked
+            const response = await request(app)
+              .get('/test-endpoint')
+              .set('Origin', origin);
             
-            const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
-            expect(isAllowed).toBe(false);
+            // Disallowed origins should not have CORS headers
+            expect(response.headers['access-control-allow-origin']).toBeUndefined();
             
             return true;
           }
@@ -386,8 +380,8 @@ describe('Preservation Property Tests: Existing Functionality', () => {
     test('should preserve middleware execution order', () => {
       // Property: Middleware executes in specific order
       const middlewareOrder = [
-        'cors',
         'helmet',
+        'cors',
         'compression',
         'body-parser',
         'cookie-parser',

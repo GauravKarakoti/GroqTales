@@ -41,28 +41,13 @@ describe('Bug Condition Exploration: Server Startup and CORS', () => {
     let app;
     
     beforeEach(() => {
-      // Create a minimal Express app mimicking sdk-server.js CORS configuration
+      // Create a minimal Express app using shared CORS configuration
       app = express();
-      
-      // This is the FIXED multi-origin CORS configuration in sdk-server.js
-      const allowedOrigins = [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://groqtales.vercel.app',
-        'https://groqtales.xyz',
-        'https://www.groqtales.xyz',
-      ];
+      const { corsOriginCallback } = require('../../server/config/cors');
       
       app.use(
         cors({
-          origin: (origin, callback) => {
-            // Allow requests with no origin (Swagger UI, curl, server-to-server)
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-              return callback(null, true);
-            }
-            return callback(new Error('Not allowed by CORS'));
-          },
+          origin: corsOriginCallback,
           credentials: true,
           methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
           allowedHeaders: [

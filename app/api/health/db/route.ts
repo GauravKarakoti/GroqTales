@@ -6,6 +6,9 @@ import { NextResponse } from 'next/server';
  */
 export async function GET() {
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+  const controller = new AbortController();
+  const timeoutMs = 3000; // 3 second timeout
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
     const response = await fetch(`${backendUrl}/api/health/db`, {
@@ -14,8 +17,10 @@ export async function GET() {
         'Content-Type': 'application/json',
       },
       cache: 'no-store',
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
     if (!response.ok) {
       return NextResponse.json(
         { 
@@ -29,8 +34,9 @@ export async function GET() {
     }
 
     const data = await response.json();
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json(data);
   } catch (error) {
+    clearTimeout(timeout);
     return NextResponse.json(
       { 
         status: 'down',

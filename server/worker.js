@@ -47,15 +47,32 @@ app.use(
       
       // Check if origin matches any allowed origin
       const isAllowed = allowedOrigins.some(allowed => {
-        // Exact match
-        if (origin === allowed) return true;
-        // Starts with match (for subdomains)
-        if (origin.startsWith(allowed)) return true;
-        // Check for Vercel preview deployments
-        if (origin.includes('vercel.app')) return true;
-        // Check for Cloudflare Pages preview deployments
-        if (origin.includes('pages.dev')) return true;
-        return false;
+        try {
+          const originUrl = new URL(origin);
+          const originHostname = originUrl.hostname;
+          
+          try {
+            const allowedUrl = new URL(allowed);
+            const allowedHost = allowedUrl.hostname;
+            
+            // Exact hostname match
+            if (originHostname === allowedHost) return true;
+            // Subdomain match (e.g., preview.groqtales.xyz matches *.groqtales.xyz)
+            if (originHostname.endsWith('.' + allowedHost)) return true;
+          } catch {
+            // allowed is not a valid URL, skip
+          }
+          
+          // Vercel preview: allow *.vercel.app
+          if (originHostname === 'vercel.app' || originHostname.endsWith('.vercel.app')) return true;
+          // Cloudflare Pages preview: allow *.pages.dev
+          if (originHostname === 'pages.dev' || originHostname.endsWith('.pages.dev')) return true;
+          
+          return false;
+        } catch {
+          // Invalid origin URL, reject
+          return false;
+        }
       });
       
       if (isAllowed) {

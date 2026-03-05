@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const { corsOriginCallback } = require('./config/cors');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -21,47 +22,10 @@ app.get('/healthz', (req, res) => {
 // Security and middleware
 app.use(helmet());
 
-// CORS configuration — allow multiple origins
-const allowedOrigins = [
-  process.env.CORS_ORIGIN,
-  process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://groqtales-backend-api.onrender.com',
-  'https://groqtales.vercel.app',
-  'https://groqtales-git-main-indie-hub25s-projects.vercel.app',
-  'https://www.groqtales.xyz',
-  'https://groqtales.xyz',
-  'https://groqtales.pages.dev',
-  'https://groqtales.netlify.app',
-].filter(Boolean);
-
+// CORS configuration — imported from shared config
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (Swagger UI, curl, server-to-server)
-      if (!origin) return callback(null, true);
-      
-      // Check if origin matches any allowed origin
-      const isAllowed = allowedOrigins.some(allowed => {
-        // Exact match
-        if (origin === allowed) return true;
-        // Starts with match (for subdomains)
-        if (origin.startsWith(allowed)) return true;
-        // Check for Vercel preview deployments
-        if (origin.includes('vercel.app')) return true;
-        // Check for Cloudflare Pages preview deployments
-        if (origin.includes('pages.dev')) return true;
-        return false;
-      });
-      
-      if (isAllowed) {
-        return callback(null, true);
-      }
-      
-      console.warn(`[CORS] Blocked origin: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: corsOriginCallback,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
